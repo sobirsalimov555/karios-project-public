@@ -1,0 +1,1 @@
+This repository contains the source code of Karios project, which was designed to help small enterprenuires manage financial risks and be aware of current trends of oil , gold , btc and cpi inflation, additionally this site contains several indexes' calculator and personal burn out & profit tracking to track economic risks. The website of the project: karios.site
