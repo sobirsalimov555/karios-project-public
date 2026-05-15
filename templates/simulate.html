@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Monte Carlo VaR Simulation</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <div class="container">
+    <div class="top-bar">
+      <h1>Monte Carlo VaR Simulation</h1>
+      <nav>
+        <a href="/">Dashboard</a>
+        <a href="/indicators">Indicators</a>
+        <a href="/simulate" class="active">VaR</a>
+        <a href="/cash-flow">Cash Flow</a>
+        <a href="/purchasing-power">Calculator</a>
+        <a href="/profile">Profile</a>
+        <a href="/track">Income</a>
+        {% if user %}<a href="/logout">Logout</a>{% else %}<a href="/login">Sign In</a>{% endif %}
+      </nav>
+    </div>
+
+    <div class="page-title">
+      <p>Runs {{ scenarios }} scenarios of BTC/Oil price paths over 1 quarter to compute Value at Risk.</p>
+    </div>
+
+    <div class="two-col">
+      <div class="calc-card">
+        <h3>Run Simulation</h3>
+        <p class="calc-desc">Configure the Monte Carlo parameters and run.</p>
+        <form method="get" action="/simulate" class="calc-form">
+          <label>Number of Scenarios</label>
+          <input type="number" name="scenarios" value="{{ scenarios }}" min="100" max="10000" step="100">
+
+          <label>Confidence Level</label>
+          <select name="confidence" style="width:100%;padding:0.45rem 0.65rem;border:2px solid var(--violet-200);border-radius:8px;background:var(--violet-50);color:var(--gray-900);font-size:0.9rem;margin-bottom:0.4rem;outline:none">
+            <option value="0.95" {% if confidence == 0.95 %}selected{% endif %}>95%</option>
+            <option value="0.99" {% if confidence == 0.99 %}selected{% endif %}>99%</option>
+          </select>
+
+          <button type="submit">Run {{ scenarios }} Scenarios &rarr;</button>
+        </form>
+      </div>
+
+      {% if result %}
+      <div class="section-card">
+        <h2>VaR Results</h2>
+        <div class="profit-box">
+          <div class="profit-row total"><span>VaR ({{ (confidence*100)|int }}%):</span><span class="negative">{{ result.var_95_pct }}%</span></div>
+          <div style="font-size:0.78rem;color:var(--gray-500);margin-bottom:0.5rem">{{ result.var_95_label }}</div>
+
+          <div class="profit-row total"><span>VaR (99%):</span><span class="negative">{{ result.var_99_pct }}%</span></div>
+          <div style="font-size:0.78rem;color:var(--gray-500);margin-bottom:0.5rem">{{ result.var_99_label }}</div>
+
+          <div class="profit-row"><span>Worst Case:</span><span class="negative">{{ result.worst_case_pct }}%</span></div>
+          <div class="profit-row"><span>Best Case:</span><span class="positive">{{ result.best_case_pct }}%</span></div>
+          <div class="profit-row"><span>Median:</span><span>{{ result.median_pct }}%</span></div>
+          <div class="profit-row total"><span>Upside Probability:</span><span class="positive">{{ result.upside_probability_pct }}%</span></div>
+        </div>
+        <div style="font-size:0.75rem;color:var(--gray-500);margin-top:0.4rem">
+          Horizon: {{ result.horizon_days }} trading days &middot; Scenarios: {{ result.num_scenarios }}
+        </div>
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="section-card">
+      <h2>Understanding VaR</h2>
+      <div class="formula" style="font-size:0.85rem;margin-bottom:0.4rem">
+        <strong>Value at Risk (VaR)</strong> = The maximum loss expected over a given time period at a given confidence level.
+      </div>
+      <div class="formula" style="font-size:0.85rem;margin-bottom:0.4rem">
+        <strong>95% VaR of -12%</strong> means there is a 5% chance your portfolio loses more than 12% in one quarter.
+      </div>
+      <div class="formula" style="font-size:0.85rem">
+        This simulation models BTC and Oil price paths using historical volatility (Gaussian random walks) and accounts for your BTC holdings and oil expense exposure from your <a href="/profile">Business Profile</a>.
+      </div>
+    </div>
+
+    <footer>
+      <a href="/">Dashboard</a> &middot;
+      <a href="/indicators">Indicators</a> &middot;
+      <a href="/simulate">VaR</a> &middot;
+      <a href="/cash-flow">Cash Flow</a> &middot;
+      <a href="/purchasing-power">Calculator</a> &middot;
+      <a href="/profile">Profile</a> &middot;
+      {% if user %}<a href="/track">Income</a> &middot; <a href="/logout">Logout</a>{% else %}<a href="/login">Sign In</a>{% endif %}
+    </footer>
+  </div>
+</body>
+</html>

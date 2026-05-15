@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cash Flow Forecast</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <div class="container">
+    <div class="top-bar">
+      <h1>Cash Flow Forecast</h1>
+      <nav>
+        <a href="/">Dashboard</a>
+        <a href="/indicators">Indicators</a>
+        <a href="/simulate">VaR</a>
+        <a href="/cash-flow" class="active">Cash Flow</a>
+        <a href="/purchasing-power">Calculator</a>
+        <a href="/profile">Profile</a>
+        <a href="/track">Income</a>
+        {% if user %}<a href="/logout">Logout</a>{% else %}<a href="/login">Sign In</a>{% endif %}
+      </nav>
+    </div>
+
+    <div class="page-title">
+      <p>Auto-adjusted for inflation ({{ result.inputs.inflation_rate }}%) and oil price (${{ "{:,.1f}".format(result.inputs.oil_price) }}/bbl) based on your expense profile.</p>
+    </div>
+
+    <div class="two-col">
+      <div class="calc-card">
+        <h3>Adjust Horizon</h3>
+        <p class="calc-desc">Change the forecast window.</p>
+        <form method="get" action="/cash-flow" class="calc-form">
+          <label>Months to Forecast</label>
+          <select name="months" style="width:100%;padding:0.45rem 0.65rem;border:2px solid var(--violet-200);border-radius:8px;background:var(--violet-50);color:var(--gray-900);font-size:0.9rem;margin-bottom:0.4rem;outline:none">
+            {% for m in [3, 6, 12, 24] %}
+            <option value="{{ m }}" {% if months == m %}selected{% endif %}>{{ m }} months</option>
+            {% endfor %}
+          </select>
+          <button type="submit">Run Forecast</button>
+        </form>
+
+        <h3 style="margin-top:1rem">Current Inputs</h3>
+        <div class="profit-box">
+          <div class="profit-row"><span>Monthly Burn:</span><span>${{ "{:,.0f}".format(result.inputs.current_monthly_burn) }}</span></div>
+          <div class="profit-row"><span>Cash Reserves:</span><span>${{ "{:,.0f}".format(result.inputs.cash_reserves) }}</span></div>
+          <div class="profit-row"><span>Inflation:</span><span>{{ result.inputs.inflation_rate }}%</span></div>
+          <div class="profit-row"><span>Oil Price:</span><span>${{ "{:,.1f}".format(result.inputs.oil_price) }}</span></div>
+        </div>
+
+        <h3>Adjustment Factors</h3>
+        <div class="profit-box">
+          <div class="profit-row"><span>Oil Adjustment:</span><span>&times;{{ result.adjustments.oil_adjustment_factor }}</span></div>
+          <div class="profit-row"><span>Inflation Adjustment:</span><span>&times;{{ result.adjustments.inflation_adjustment_factor }}</span></div>
+          <div class="profit-row total"><span>Combined:</span><span>&times;{{ result.adjustments.combined_adjustment }}</span></div>
+          <div class="profit-row"><span>Projected Burn:</span><span>${{ "{:,.0f}".format(result.adjustments.projected_monthly_burn) }}/mo</span></div>
+        </div>
+      </div>
+
+      <div class="section-card">
+        <h2>Forecast &mdash; {{ months }} Months</h2>
+        <p style="font-size:0.85rem;color:var(--violet-700);font-weight:700;margin-bottom:0.5rem">
+          Runway: <strong>{{ result.runway_months }} months</strong>
+          {% if result.runway_months < months %}
+          <span class="tag warning">Funds depleted in month {{ result.runway_months + 1 }}</span>
+          {% else %}
+          <span class="tag healthy">Solvent through full period</span>
+          {% endif %}
+        </p>
+        <div class="table-wrap">
+          <table>
+            <tr><th>Month</th><th>Projected Burn</th><th>Cumulative</th><th>Remaining Cash</th><th>Status</th></tr>
+            {% for m in result.forecast %}
+            <tr class="{% if m.status == 'depleted' %}unfav{% endif %}">
+              <td>{{ m.month }}</td>
+              <td class="negative">${{ "{:,.0f}".format(m.project_burn or m.projected_burn) }}</td>
+              <td>${{ "{:,.0f}".format(m.cumulative_burn) }}</td>
+              <td class="{% if m.remaining_cash < 0 %}negative{% else %}positive{% endif %}">
+                ${{ "{:,.0f}".format(m.remaining_cash) }}
+              </td>
+              <td><span class="tag {{ 'critical' if m.status == 'depleted' else 'healthy' }}">{{ m.status }}</span></td>
+            </tr>
+            {% endfor %}
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-card">
+      <h2>Methodology</h2>
+      <div class="formula" style="font-size:0.82rem;margin-bottom:0.3rem">
+        1. <strong>Oil Adjustment</strong> = 1 + ((Oil Price - $75) / $75 &times; Fuel Energy %)
+      </div>
+      <div class="formula" style="font-size:0.82rem;margin-bottom:0.3rem">
+        2. <strong>Inflation Adjustment</strong> = 1 + (Inflation Rate &times; (Payroll % + Materials % + Other %))
+      </div>
+      <div class="formula" style="font-size:0.82rem">
+        3. <strong>Month N Burn</strong> = Projected Burn &times; (1 + Inflation/12)^(N-1)
+      </div>
+    </div>
+
+    <footer>
+      <a href="/">Dashboard</a> &middot;
+      <a href="/indicators">Indicators</a> &middot;
+      <a href="/simulate">VaR</a> &middot;
+      <a href="/cash-flow">Cash Flow</a> &middot;
+      <a href="/purchasing-power">Calculator</a> &middot;
+      <a href="/profile">Profile</a> &middot;
+      {% if user %}<a href="/track">Income</a> &middot; <a href="/logout">Logout</a>{% else %}<a href="/login">Sign In</a>{% endif %}
+    </footer>
+  </div>
+</body>
+</html>

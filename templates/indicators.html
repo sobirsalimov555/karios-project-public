@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Market Indicators</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <div class="container">
+    <div class="top-bar">
+      <h1>Market Indicators &amp; Index Calculators</h1>
+      <nav>
+        <a href="/">Dashboard</a>
+        <a href="/indicators" class="active">Indicators</a>
+        <a href="/simulate">VaR</a>
+        <a href="/cash-flow">Cash Flow</a>
+        <a href="/purchasing-power">Calculator</a>
+        <a href="/profile">Profile</a>
+        <a href="/track">Income</a>
+        {% if user %}<a href="/logout">Logout</a>{% else %}<a href="/login">Sign In</a>{% endif %}
+      </nav>
+    </div>
+
+    <div class="page-title">
+      <p>Live macro indexes — enter your own values to apply financial formulas</p>
+    </div>
+
+    <!-- Index Grid -->
+    <div class="index-grid">
+      {% for key, idx in indexes.items() %}
+      <div class="index-card">
+        <div class="index-name">{{ idx.name }}</div>
+        <div class="index-val">
+          {% if idx.value is float and idx.value < 1000 %}
+            {{ "{:.2f}".format(idx.value) }}
+          {% else %}
+            {{ "{:,.0f}".format(idx.value) }}
+          {% endif %}
+        </div>
+        <div class="index-chg {% if idx.change_pct >= 0 %}positive{% else %}negative{% endif %}">
+          {{ "%+.2f%%"|format(idx.change_pct) }}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <hr style="border:none;border-top:2px solid var(--violet-200);margin-bottom:1.5rem">
+
+    <div class="page-title">
+      <h1>Apply Formulas With Your Values</h1>
+    </div>
+
+    <div class="calc-grid">
+      <!-- Real Interest Rate -->
+      <div class="calc-card">
+        <h3>Real Interest Rate</h3>
+        <p class="calc-desc">10Y Treasury Yield &minus; Inflation. Positive = bonds beat inflation.</p>
+        <form method="get" action="/indicators" class="calc-form">
+          <label>10Y Treasury Yield (%)</label>
+          <input type="number" name="tnx_input" step="0.01" value="{{ inputs.tnx if inputs.tnx and calc_result and calc_result.type == 'real_rate' else indexes.tnx.value }}">
+          <label>Inflation Rate (%)</label>
+          <input type="number" name="inf_input" step="0.01" value="{{ inputs.inf if inputs.inf and calc_result and calc_result.type == 'real_rate' else inflation }}">
+          <button type="submit" name="calc" value="real_rate">Calculate</button>
+        </form>
+        {% if calc_result and calc_result.type == "real_rate" %}
+        <div class="calc-result">
+          <div class="result-row"><span>10Y Yield:</span><span>{{ calc_result.data.inputs.treasury_10y_pct }}%</span></div>
+          <div class="result-row"><span>Inflation:</span><span>{{ calc_result.data.inputs.inflation_pct }}%</span></div>
+          <div class="result-row total"><span>Real Interest Rate:</span><span class="{% if calc_result.data.result_pct > 0 %}positive{% else %}negative{% endif %}">{{ calc_result.data.result_pct }}%</span></div>
+          <span class="tag {{ calc_result.data.status }}">{{ calc_result.data.verdict }}</span>
+          <div class="formula">{{ calc_result.data.formula }}</div>
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- Equity Risk Premium -->
+      <div class="calc-card">
+        <h3>Equity Risk Premium</h3>
+        <p class="calc-desc">S&P earnings yield vs bonds. Positive = stocks favored.</p>
+        <form method="get" action="/indicators" class="calc-form">
+          <label>S&P 500 P/E Ratio</label>
+          <input type="number" name="pe_input" step="0.1" value="{{ inputs.pe if inputs.pe and calc_result and calc_result.type == 'erp' else indexes.sp500.pe_ratio }}">
+          <label>10Y Treasury Yield (%)</label>
+          <input type="number" name="tnx2_input" step="0.01" value="{{ inputs.tnx2 if inputs.tnx2 and calc_result and calc_result.type == 'erp' else indexes.tnx.value }}">
+          <button type="submit" name="calc" value="erp">Calculate</button>
+        </form>
+        {% if calc_result and calc_result.type == "erp" %}
+        <div class="calc-result">
+          <div class="result-row"><span>Earnings Yield:</span><span>{{ calc_result.data.inputs.earnings_yield_pct }}%</span></div>
+          <div class="result-row"><span>Bond Yield:</span><span>{{ calc_result.data.inputs.bond_yield_pct }}%</span></div>
+          <div class="result-row total"><span>Equity Risk Premium:</span><span class="{% if calc_result.data.result_pct > 0 %}positive{% else %}negative{% endif %}">{{ calc_result.data.result_pct }}%</span></div>
+          <span class="tag {{ calc_result.data.status }}">{{ calc_result.data.verdict }}</span>
+          <div class="formula">{{ calc_result.data.formula }}</div>
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- Inflation-Adjusted Index -->
+      <div class="calc-card">
+        <h3>Inflation-Adjusted Index</h3>
+        <p class="calc-desc">What any index is really worth after inflation.</p>
+        <form method="get" action="/indicators" class="calc-form">
+          <label>Index Value</label>
+          <input type="number" name="idx_input" step="0.01" value="{{ inputs.idx if inputs.idx and calc_result and calc_result.type == 'infl_adj' else indexes.sp500.value }}">
+          <label>Inflation Rate (%)</label>
+          <input type="number" name="inf2_input" step="0.01" value="{{ inputs.inf2 if inputs.inf2 and calc_result and calc_result.type == 'infl_adj' else inflation }}">
+          <label>Years</label>
+          <input type="number" name="years_input" min="1" value="{{ inputs.years if inputs.years and calc_result and calc_result.type == 'infl_adj' else 1 }}">
+          <button type="submit" name="calc" value="infl_adj">Calculate</button>
+        </form>
+        {% if calc_result and calc_result.type == "infl_adj" %}
+        <div class="calc-result">
+          <div class="result-row"><span>Nominal:</span><span>{{ "{:,.2f}".format(calc_result.data.nominal) }}</span></div>
+          <div class="result-row"><span>Inflation:</span><span>{{ calc_result.data.inputs.inflation_pct }}% &times; {{ calc_result.data.inputs.years }}yr</span></div>
+          <div class="result-row total"><span>Real Value:</span><span class="positive">{{ "{:,.2f}".format(calc_result.data.real_value) }}</span></div>
+          <div class="result-row"><span>Value Eroded:</span><span class="negative">{{ "{:,.2f}".format(calc_result.data.value_eroded) }} ({{ calc_result.data.erosion_pct }}%)</span></div>
+          <div class="formula">{{ calc_result.data.formula }}</div>
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- S&P Fair Value (Fed Model) -->
+      <div class="calc-card">
+        <h3>S&P Fair Value (Fed Model)</h3>
+        <p class="calc-desc">Compare S&P to bond-yield-based fair value.</p>
+        <form method="get" action="/indicators" class="calc-form">
+          <label>Trailing Earnings ($/share)</label>
+          <input type="number" name="earn_input" step="0.01" value="{{ inputs.earn if inputs.earn and calc_result and calc_result.type == 'fed_model' else indexes.sp500.earnings }}">
+          <label>10Y Treasury Yield (%)</label>
+          <input type="number" name="tnx3_input" step="0.01" value="{{ inputs.tnx3 if inputs.tnx3 and calc_result and calc_result.type == 'fed_model' else indexes.tnx.value }}">
+          <button type="submit" name="calc" value="fed_model">Calculate</button>
+        </form>
+        {% if calc_result and calc_result.type == "fed_model" %}
+        <div class="calc-result">
+          <div class="result-row"><span>Earnings:</span><span>${{ calc_result.data.inputs.trailing_earnings }}</span></div>
+          <div class="result-row"><span>Bond Yield:</span><span>{{ (calc_result.data.inputs.bond_yield_decimal * 100)|round(2) }}%</span></div>
+          <div class="result-row total"><span>Fair Value:</span><span class="{% if calc_result.data.fair_value > indexes.sp500.value %}positive{% else %}negative{% endif %}">{{ "{:,.0f}".format(calc_result.data.fair_value) }}</span></div>
+          <div class="result-row">
+            <span>vs S&P {{ "{:,.0f}".format(indexes.sp500.value) }}:</span>
+            <span class="{% if calc_result.data.fair_value > indexes.sp500.value %}positive{% else %}negative{% endif %}">
+              {% if calc_result.data.fair_value > indexes.sp500.value %}Overvalued{% else %}Undervalued{% endif %}
+              {{ "{:,.0f}".format((calc_result.data.fair_value - indexes.sp500.value)|abs / indexes.sp500.value * 100) }}%
+            </span>
+          </div>
+          <div class="formula">{{ calc_result.data.formula }}</div>
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- VIX Market Stress -->
+      <div class="calc-card">
+        <h3>VIX Market Stress</h3>
+        <p class="calc-desc">Volatility fear gauge. VIX &lt; 15 calm, &gt; 25 fear.</p>
+        <form method="get" action="/indicators" class="calc-form">
+          <label>VIX Value</label>
+          <input type="number" name="vix_input" step="0.1" value="{{ inputs.vix if inputs.vix and calc_result and calc_result.type == 'vix_stress' else indexes.vix.value }}">
+          <button type="submit" name="calc" value="vix_stress">Calculate</button>
+        </form>
+        {% if calc_result and calc_result.type == "vix_stress" %}
+        <div class="calc-result">
+          <div class="result-row"><span>VIX:</span><span>{{ calc_result.data.vix }}</span></div>
+          <div class="result-row"><span>Stress Index:</span><span>{{ calc_result.data.stress_index }}</span></div>
+          <div class="result-row total"><span>Stress Level:</span><span class="tag {{ calc_result.data.stress_level }}">{{ calc_result.data.stress_level|upper }}</span></div>
+          <div style="font-size:0.78rem;color:var(--gray-500);margin-top:0.3rem">{{ calc_result.data.message }}</div>
+          <div class="formula">{{ calc_result.data.formula }}</div>
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- Purchasing Power Decay -->
+      <div class="calc-card">
+        <h3>Purchasing Power Decay</h3>
+        <p class="calc-desc">See how inflation eats cash over time.</p>
+        <form method="get" action="/indicators" class="calc-form">
+          <label>Amount ($)</label>
+          <input type="number" name="amt_input" step="0.01" value="{{ inputs.amt if inputs.amt and calc_result and calc_result.type == 'pp_decay' else 100000 }}">
+          <label>Inflation Rate (%)</label>
+          <input type="number" name="inf3_input" step="0.01" value="{{ inputs.inf3 if inputs.inf3 and calc_result and calc_result.type == 'pp_decay' else inflation }}">
+          <label>Years</label>
+          <input type="number" name="yrs_input" min="1" max="30" value="{{ inputs.yrs if inputs.yrs and calc_result and calc_result.type == 'pp_decay' else 5 }}">
+          <button type="submit" name="calc" value="pp_decay">Calculate</button>
+        </form>
+        {% if calc_result and calc_result.type == "pp_decay" %}
+        <div class="calc-result">
+          <div class="result-row"><span>Amount:</span><span>${{ "{:,.2f}".format(calc_result.data.inputs.amount) }}</span></div>
+          <div class="result-row"><span>After {{ calc_result.data.inputs.years }}yr:</span><span class="positive">${{ "{:,.2f}".format(calc_result.data.future_real_value) }}</span></div>
+          <div class="result-row total"><span>Purchasing Power Lost:</span><span class="negative">${{ "{:,.2f}".format(calc_result.data.total_purchasing_power_lost) }} ({{ calc_result.data.loss_pct }}%)</span></div>
+          {% if calc_result.data.annual_breakdown %}
+          <table class="pp-table">
+            <tr><th>Year</th><th>Real Value</th><th>Lost</th></tr>
+            {% for row in calc_result.data.annual_breakdown[:10] %}
+            <tr><td>{{ row.year }}</td><td>${{ "{:,.2f}".format(row.real_value) }}</td><td class="negative">${{ "{:,.2f}".format(row.lost) }}</td></tr>
+            {% endfor %}
+          </table>
+          {% endif %}
+          <div class="formula">{{ calc_result.data.formula }}</div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <footer>
+      <a href="/">Dashboard</a> &middot;
+      <a href="/indicators">Indicators</a> &middot;
+      <a href="/simulate">VaR</a> &middot;
+      <a href="/cash-flow">Cash Flow</a> &middot;
+      <a href="/purchasing-power">Calculator</a> &middot;
+      <a href="/profile">Profile</a> &middot;
+      {% if user %}<a href="/track">Income</a> &middot; <a href="/logout">Logout</a>{% else %}<a href="/login">Sign In</a>{% endif %}
+    </footer>
+  </div>
+</body>
+</html>

@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Create Account</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <style>
+    .auth-card { max-width: 420px; margin: 3rem auto; }
+    .auth-card h2 { text-align: center; border: none; font-size: 1.3rem; margin-bottom: 1.5rem; }
+    .auth-card .calc-form { display: flex; flex-direction: column; }
+    .auth-card .calc-form button { margin-top: 0.5rem; width: 100%; }
+    .auth-card .calc-form input { margin-bottom: 0.75rem; }
+    .auth-link { text-align: center; margin-top: 1rem; font-size: 0.85rem; color: var(--gray-500); }
+    .auth-link a { color: var(--violet-700); font-weight: 600; text-decoration: none; }
+    .auth-link a:hover { text-decoration: underline; }
+    .auth-error { background: var(--red-bg); border: 1px solid var(--red-border); color: var(--red); padding: 0.6rem 0.8rem; border-radius: 8px; font-size: 0.82rem; margin-bottom: 1rem; text-align: center; }
+    .mode-badge { text-align: center; font-size: 0.7rem; color: var(--gray-400); margin-bottom: 1rem; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="top-bar">
+        <h1>Karios</h1>
+      <nav>
+        <a href="/">Dashboard</a>
+        <a href="/indicators">Indicators</a>
+        <a href="/simulate">VaR</a>
+        <a href="/cash-flow">Cash Flow</a>
+        <a href="/purchasing-power">Calculator</a>
+        <a href="/profile">Profile</a>
+        {% if user %}<a href="/track">Income</a><a href="/logout">Logout</a>{% else %}<a href="/login">Sign In</a>{% endif %}
+      </nav>
+    </div>
+
+    <div class="auth-card section-card">
+      <h2>Create Account</h2>
+      {% if error %}
+      <div class="auth-error">{{ error }}</div>
+      {% endif %}
+      <form method="get" action="/signup/submit" class="calc-form">
+        <label>Full Name</label>
+        <input type="text" name="name" required placeholder="Jane Doe">
+
+        <label>Email</label>
+        <input type="email" name="email" required placeholder="you@company.com">
+
+        <label>Password</label>
+        <input type="password" name="password" required minlength="6" placeholder="At least 6 characters">
+
+        <button type="submit">Create Account</button>
+      </form>
+      <div class="auth-link">
+        Already have an account? <a href="/login">Sign in</a>
+      </div>
+    </div>
+
+    <footer>
+      <a href="/">Dashboard</a> &middot; <a href="/login">Sign In</a>
+    </footer>
+  </div>
+</body>
+</html>

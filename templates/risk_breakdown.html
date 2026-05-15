@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Risk Breakdown - Karios</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <div class="container">
+    <div class="top-bar">
+      <div>
+        <h1>Karios</h1>
+        <div class="subtitle" style="font-size:0.7rem;text-align:left;margin:0">Risk Breakdown &mdash; <strong>{{ industry|capitalize }}</strong></div>
+      </div>
+      <nav>
+        <a href="/">Dashboard</a>
+        <a href="/indicators">Indicators</a>
+        <a href="/simulate">VaR</a>
+        <a href="/cash-flow">Cash Flow</a>
+        <a href="/purchasing-power">Calculator</a>
+        <a href="/profile">Profile</a>
+        <a href="/track">Income</a>
+        {% if user %}<a href="/logout">Logout</a>{% else %}<a href="/login">Sign In</a>{% endif %}
+      </nav>
+    </div>
+
+    <div class="risk-banner {{ risk.severity }}" style="margin-bottom:1.5rem">
+      <span>
+        <strong>Macro Risk Score: {{ risk.macro_risk_score }}/100 ({{ risk.severity|upper }})</strong> &mdash;
+        {% if risk.severity == "low" %}Low risk. Markets stable relative to your industry profile.
+        {% elif risk.severity == "medium" %}Moderate risk. Some assets moving against your sensitivity.
+        {% elif risk.severity == "high" %}Elevated risk. Consider reviewing your exposures.
+        {% else %}Critical risk. Multiple unfavorable movements detected.
+        {% endif %}
+      </span>
+    </div>
+
+    <div class="two-col">
+      <div class="section-card">
+        <h2>Per-Asset Impact Breakdown</h2>
+        <div class="table-wrap">
+          <table>
+            <tr>
+              <th>Asset</th>
+              <th>Sensitivity (S)</th>
+              <th>Price Change</th>
+              <th>Raw Impact</th>
+              <th>Unfavorable Penalty</th>
+              <th>Final Impact</th>
+            </tr>
+            {% for asset, data in risk.asset_impacts.items() %}
+            <tr class="{% if data.is_unfavorable %}unfav{% endif %}">
+              <td><strong>{{ asset|capitalize }}</strong></td>
+              <td>{{ data.sensitivity }}</td>
+              <td class="{% if data.change_pct < 0 %}negative{% else %}positive{% endif %}">{{ "{:+.2f}".format(data.change_pct) }}%</td>
+              <td>{{ "%.4f"|format(data.change_pct|abs * data.sensitivity) }}</td>
+              <td>{{ "×1.5" if data.is_unfavorable else "×1.0" }}</td>
+              <td><strong>{{ "%.4f"|format(data.impact) }}</strong></td>
+            </tr>
+            {% endfor %}
+          </table>
+        </div>
+        <p style="margin-top:0.5rem;font-size:0.78rem;color:var(--gray-500)">
+          <strong>Formula:</strong> Impact = |Price Change %| × Sensitivity, then &times;1.5 if direction is unfavorable for your industry.
+        </p>
+      </div>
+
+      <div class="section-card">
+        <h2>Scoring Details</h2>
+        <div class="profit-box">
+          <div class="profit-row"><span>Total Raw Impact:</span><span>{{ "%.4f"|format(risk.total_impact) }}</span></div>
+          <div class="profit-row"><span>Score (total &times; 10):</span><span>{{ risk.macro_risk_score }}</span></div>
+          <div class="profit-row total"><span>Final Risk Score:</span>
+            <span class="{% if risk.macro_risk_score > 45 %}negative{% else %}positive{% endif %}">{{ risk.macro_risk_score }}/100</span>
+          </div>
+        </div>
+
+        <h2 style="margin-top:1rem">Scoring Scale</h2>
+        <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
+          <span class="tag healthy">1-25 Low</span>
+          <span class="tag neutral">26-45 Medium</span>
+          <span class="tag high">46-65 High</span>
+          <span class="tag critical">66-100 Critical</span>
+        </div>
+
+        <h2 style="margin-top:1rem">Active Alerts</h2>
+        {% for a in divergence.alerts %}
+        <div class="alert-item {{ a.severity }}">
+          <span class="alert-tag">{{ a.type }}</span>
+          <span>{{ a.message }}</span>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div style="text-align:center;margin-top:1.5rem">
+      <a href="/" class="calc-form" style="display:inline-block">
+        <button style="background:var(--violet-700);color:#fff;border:none;padding:0.6rem 2rem;border-radius:10px;font-size:0.9rem;font-weight:700;cursor:pointer">&larr; Back to Dashboard</button>
+      </a>
+    </div>
+
+    <footer>
+      <a href="/">Dashboard</a> &middot;
+      <a href="/indicators">Indicators</a> &middot;
+      <a href="/simulate">VaR</a> &middot;
+      <a href="/cash-flow">Cash Flow</a> &middot;
+      <a href="/purchasing-power">Calculator</a> &middot;
+      <a href="/profile">Profile</a> &middot;
+      {% if user %}<a href="/track">Income</a> &middot; <a href="/logout">Logout</a>{% else %}<a href="/login">Sign In</a>{% endif %}
+    </footer>
+  </div>
+</body>
+</html>

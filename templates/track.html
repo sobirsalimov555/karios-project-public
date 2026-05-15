@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Income Tracking</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <div class="container">
+    <div class="top-bar">
+      <h1>Income &amp; Risk Tracking</h1>
+      <nav>
+        <a href="/">Dashboard</a>
+        <a href="/indicators">Indicators</a>
+        <a href="/simulate">VaR</a>
+        <a href="/cash-flow">Cash Flow</a>
+        <a href="/track" class="active">Income</a>
+        <a href="/profile">Profile</a>
+        <a href="/logout">Logout</a>
+      </nav>
+    </div>
+
+    <div class="risk-banner low" style="margin-bottom:1.25rem">
+      <span>Logged in as <strong>{{ user.email }}</strong> &mdash; your data is saved{% if supabase_mode %} to Supabase{% else %} locally{% endif %}.</span>
+    </div>
+
+    <div class="two-col">
+      <div class="calc-card">
+        <h3>Record Income / Expense</h3>
+        <p class="calc-desc">Track personal or business cash flows for risk-adjusted insights.</p>
+        <form method="get" action="/track/add" class="calc-form">
+          <label>Type</label>
+          <select name="type" style="width:100%;padding:0.45rem 0.65rem;border:2px solid var(--violet-200);border-radius:8px;background:var(--violet-50);color:var(--gray-900);font-size:0.9rem;margin-bottom:0.4rem;outline:none">
+            <option value="income">Income</option>
+            <option value="expense">Expense</option>
+          </select>
+
+          <label>Category</label>
+          <select name="category" style="width:100%;padding:0.45rem 0.65rem;border:2px solid var(--violet-200);border-radius:8px;background:var(--violet-50);color:var(--gray-900);font-size:0.9rem;margin-bottom:0.4rem;outline:none">
+            <option value="revenue">Revenue</option>
+            <option value="payroll">Payroll</option>
+            <option value="fuel_energy">Fuel / Energy</option>
+            <option value="materials">Materials</option>
+            <option value="investments">Investments</option>
+            <option value="other">Other</option>
+          </select>
+
+          <label>Amount ($)</label>
+          <input type="number" name="amount" step="0.01" required placeholder="0.00">
+
+          <label>Description</label>
+          <input type="text" name="description" placeholder="Optional note">
+
+          <button type="submit">Save Record</button>
+        </form>
+      </div>
+
+      <div class="section-card">
+        <h2>Recent Records</h2>
+        {% if records %}
+        <div class="table-wrap">
+          <table>
+            <tr><th>Date</th><th>Type</th><th>Category</th><th>Amount</th><th>Note</th></tr>
+            {% for r in records[:20] %}
+            <tr class="{% if r.type == 'expense' %}unfav{% endif %}">
+              <td style="font-size:0.72rem">{{ r.date[:10] if r.date else '--' }}</td>
+              <td><span class="tag {% if r.type == 'income' %}healthy{% else %}critical{% endif %}">{{ r.type }}</span></td>
+              <td>{{ r.category }}</td>
+              <td class="{% if r.type == 'income' %}positive{% else %}negative{% endif %}">
+                ${{ "{:,.2f}".format(r.amount) }}
+              </td>
+              <td style="font-size:0.75rem;color:var(--gray-500)">{{ r.description or '--' }}</td>
+            </tr>
+            {% endfor %}
+          </table>
+        </div>
+        {% else %}
+        <p style="color:var(--gray-500);font-size:0.85rem;font-style:italic;text-align:center;padding:2rem 0">
+          No records yet. Add your first income or expense above.
+        </p>
+        {% endif %}
+
+        {% if records %}
+        <h2 style="margin-top:1rem">Summary</h2>
+        {% set totals = namespace(income=0, expense=0) %}
+        {% for r in records %}
+          {% if r.type == 'income' %}{% set totals.income = totals.income + r.amount %}{% endif %}
+          {% if r.type == 'expense' %}{% set totals.expense = totals.expense + r.amount %}{% endif %}
+        {% endfor %}
+        <div class="profit-box">
+          <div class="profit-row"><span>Total Income:</span><span class="positive">${{ "{:,.2f}".format(totals.income) }}</span></div>
+          <div class="profit-row"><span>Total Expenses:</span><span class="negative">${{ "{:,.2f}".format(totals.expense) }}</span></div>
+          <div class="profit-row total"><span>Net:</span>
+            <span class="{% if totals.income - totals.expense >= 0 %}positive{% else %}negative{% endif %}">
+              ${{ "{:,.2f}".format(totals.income - totals.expense) }}
+            </span>
+          </div>
+        </div>
+
+        <h2>Risk-Adjusted View</h2>
+        {% set real_income = totals.income * (1 - inflation/100) %}
+        {% set real_expense = totals.expense * (1 + inflation/100) %}
+        <div class="profit-box">
+          <div class="profit-row"><span>Inflation Rate:</span><span class="negative">{{ inflation }}%</span></div>
+          <div class="profit-row"><span>Real Income (adj.):</span><span class="positive">${{ "{:,.2f}".format(real_income) }}</span></div>
+          <div class="profit-row"><span>Real Expenses (adj.):</span><span class="negative">${{ "{:,.2f}".format(real_expense) }}</span></div>
+          <div class="profit-row total"><span>Real Net:</span>
+            <span class="{% if real_income - real_expense >= 0 %}positive{% else %}negative{% endif %}">
+              ${{ "{:,.2f}".format(real_income - real_expense) }}
+            </span>
+          </div>
+          <div class="profit-row"><span>Inflation Erosion:</span><span class="negative">${{ "{:,.2f}".format(totals.income - real_income) }}</span></div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <footer>
+      <a href="/">Dashboard</a> &middot;
+      <a href="/indicators">Indicators</a> &middot;
+      <a href="/simulate">VaR</a> &middot;
+      <a href="/cash-flow">Cash Flow</a> &middot;
+      <a href="/purchasing-power">Calculator</a> &middot;
+      <a href="/profile">Profile</a> &middot;
+      <a href="/logout">Logout</a>
+    </footer>
+  </div>
+</body>
+</html>

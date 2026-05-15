@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Karios</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <div class="container">
+
+    <!-- Top Bar -->
+    <div class="top-bar">
+      <div>
+        <h1>Karios</h1>
+        <div class="subtitle" style="font-size:0.7rem;text-align:left;margin:0">Profile: <strong>{{ industry|capitalize }}</strong> &middot; 
+          {% if market.bitcoin.live or market.gold.live %} 
+            <span class="tag healthy">Live Data</span>
+          {% else %}
+            <span class="tag neutral">Cached / Demo</span>
+          {% endif %}
+        </div>
+      </div>
+      <nav>
+        <a href="/" class="active">Dashboard</a>
+        <a href="/indicators">Indicators</a>
+        <a href="/simulate">VaR</a>
+        <a href="/cash-flow">Cash Flow</a>
+        <a href="/purchasing-power">Calculator</a>
+        <a href="/profile">Profile</a>
+        <a href="/track">Income</a>
+        {% if user %}<a href="/logout">Logout</a>{% else %}<a href="/login">Sign In</a>{% endif %}
+      </nav>
+    </div>
+
+    <!-- Ticker Tape -->
+    <div class="ticker">
+      <div class="ticker-item">
+        <div class="ticker-icon btc">₿</div>
+        <div class="ticker-info">
+          <div class="ticker-label">Bitcoin</div>
+          <div class="ticker-price">${{ "{:,.0f}".format(market.bitcoin.price) }}</div>
+          <div class="ticker-change {% if market.bitcoin.change_24h < 0 %}negative{% else %}positive{% endif %}">
+            {{ "{:+.2f}".format(market.bitcoin.change_24h) }}% (24h)
+          </div>
+        </div>
+      </div>
+      <div class="ticker-item">
+        <div class="ticker-icon gold">Au</div>
+        <div class="ticker-info">
+          <div class="ticker-label">Gold</div>
+          <div class="ticker-price">${{ "{:,.0f}".format(market.gold.price) }}</div>
+          <div class="ticker-change positive">+0.3% (spot)</div>
+        </div>
+      </div>
+      <div class="ticker-item">
+        <div class="ticker-icon oil">🛢</div>
+        <div class="ticker-info">
+          <div class="ticker-label">Crude Oil</div>
+          <div class="ticker-price">${{ "{:,.1f}".format(market.crude_oil.price) }}</div>
+          <div class="ticker-change positive">+0.6% (WTI)</div>
+        </div>
+      </div>
+      <div class="ticker-item">
+        <div class="ticker-icon cpi">%</div>
+        <div class="ticker-info">
+          <div class="ticker-label">Inflation (CPI)</div>
+          <div class="ticker-price">{{ "{:.1f}".format(market.inflation.rate) }}%</div>
+          <div class="ticker-change negative">-0.1% vs prev</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Risk Banner -->
+    {% set risk_level = risk.severity %}
+    <div class="risk-banner {{ risk_level }}">
+      <span>
+        <strong>Risk Assessment:</strong>
+        {% if risk_level == "low" %}Markets stable — no immediate action needed.
+        {% elif risk_level == "medium" %}Moderate risk detected — review exposure.
+        {% elif risk_level == "high" %}Elevated risk — consider hedging positions.
+        {% else %}Critical risk — immediate portfolio review recommended.
+        {% endif %}
+      </span>
+      <div class="risk-gauge">
+        <span>Score: {{ risk.macro_risk_score }}/100</span>
+        <div class="gauge-track">
+          <div class="gauge-fill" style="width:{{ risk.macro_risk_score }}%;background:{% if risk_level=='low' %}#059669{% elif risk_level=='medium' %}#d97706{% elif risk_level=='high' %}#ea580c{% else %}#dc2626{% endif %}"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CTA Action Cards -->
+    <div class="cta-grid">
+      <div class="cta-card">
+        <div class="cta-icon">&#x1F6E0;</div>
+        <h3>Macro Risk Score</h3>
+        <p>Sensitivity-weighted risk based on your industry profile.</p>
+        <div class="cta-value">{{ risk.macro_risk_score }}/100 <span style="font-size:0.7rem;font-weight:600;color:var(--gray-500)">{{ risk.severity|upper }}</span></div>
+        <a href="/risk-breakdown?industry={{ industry }}" class="cta-btn">View Breakdown &rarr;</a>
+      </div>
+
+      <div class="cta-card">
+        <div class="cta-icon">&#x1F4B0;</div>
+        <h3>Real Profit</h3>
+        <p>Inflation-adjusted profit — see true purchasing power.</p>
+        <div class="cta-value">${{ "{:,.0f}".format(real_profit_result.real_profit) }}</div>
+        <a href="/purchasing-power?profit=500000" class="cta-btn outline">Calculate Yours &rarr;</a>
+      </div>
+
+      <div class="cta-card">
+        <div class="cta-icon">&#x1F511;</div>
+        <h3>Hedging Advisor</h3>
+        <p>{% if alerts.details %}{{ alerts.details[0].rationale[:60] }}...{% else %}Inflation within threshold — no hedge needed.{% endif %}</p>
+        <div class="cta-value">
+          {% if alerts.details %}
+            {% for d in alerts.details %}{{ d.allocation_pct }}% {{ d.asset|upper }}{% if not loop.last %} + {% endif %}{% endfor %}
+          {% else %}0% allocated{% endif %}
+        </div>
+        <a href="/indicators" class="cta-btn outline">Run Analysis &rarr;</a>
+      </div>
+
+      <div class="cta-card">
+        <div class="cta-icon">&#x1F4CA;</div>
+        <h3>Purchasing Power</h3>
+        <p>See how inflation erodes your product costs and profits.</p>
+        <div class="cta-value">{{ real_profit_result.purchasing_power_loss_pct }}% lost/yr</div>
+        <a href="/purchasing-power" class="cta-btn">Open Calculator &rarr;</a>
+      </div>
+    </div>
+
+    <!-- Two Column Detail -->
+    <div class="two-col">
+      <div class="section-card">
+        <h2>Sensitivity Analysis — {{ industry|capitalize }}</h2>
+        <div class="table-wrap">
+          <table>
+            <tr><th>Asset</th><th>S Factor</th><th>Change</th><th>Impact</th><th>Dir</th></tr>
+            {% for asset, data in risk.asset_impacts.items() %}
+            <tr class="{% if data.is_unfavorable %}unfav{% endif %}">
+              <td><strong>{{ asset|capitalize }}</strong></td>
+              <td>{{ data.sensitivity }}</td>
+              <td class="{% if data.change_pct < 0 %}negative{% else %}positive{% endif %}">{{ "{:+.2f}".format(data.change_pct) }}%</td>
+              <td>{{ "{:.4f}".format(data.impact) }}</td>
+              <td>{{ "&#x26A0;"|safe if data.is_unfavorable else "&#x2713;"|safe }}</td>
+            </tr>
+            {% endfor %}
+            <tr class="total-row"><td colspan="3"><strong>Total Impact</strong></td><td><strong>{{ "{:.4f}".format(risk.total_impact) }}</strong></td><td></td></tr>
+          </table>
+        </div>
+
+        <h2 style="margin-top:1.25rem;border:none;padding-bottom:0.25rem">Industry Benchmarks</h2>
+        <div class="industry-strip">
+          <a href="/?industry=logistics" {% if industry == "logistics" %}class="active"{% endif %}>Logistics</a>
+          <a href="/?industry=software" {% if industry == "software" %}class="active"{% endif %}>Software</a>
+          <a href="/?industry=retail" {% if industry == "retail" %}class="active"{% endif %}>Retail</a>
+          <a href="/?industry=manufacturing" {% if industry == "manufacturing" %}class="active"{% endif %}>Manufacturing</a>
+          <a href="/?industry=finance" {% if industry == "finance" %}class="active"{% endif %}>Finance</a>
+          <a href="/?industry=healthcare" {% if industry == "healthcare" %}class="active"{% endif %}>Healthcare</a>
+        </div>
+      </div>
+
+      <div class="section-card">
+        <h2>Real Profit & Hedging</h2>
+        <div class="profit-box">
+          <div class="profit-row"><span>Nominal Profit:</span><span>${{ "{:,.0f}".format(real_profit_result.nominal_profit) }}</span></div>
+          <div class="profit-row"><span>Inflation Adjustment:</span><span class="negative">-{{ real_profit_result.inflation_rate }}%</span></div>
+          <div class="profit-row total"><span>Real Profit (true value):</span><span class="positive">${{ "{:,.0f}".format(real_profit_result.real_profit) }}</span></div>
+          <div class="profit-row"><span>Purchasing Power Loss:</span><span class="negative">{{ real_profit_result.purchasing_power_loss_pct }}%</span></div>
+        </div>
+
+        <h2 style="margin-top:1rem">Hedging Recommendation</h2>
+        {% if alerts.details %}
+          <p style="font-size:0.82rem;color:var(--violet-700);font-weight:700;margin-bottom:0.5rem">{{ alerts.recommendation }}</p>
+          {% for d in alerts.details %}
+          <div style="background:var(--violet-50);border:1px solid var(--violet-200);border-radius:8px;padding:0.6rem 0.75rem;margin-bottom:0.35rem;font-size:0.82rem">
+            <strong style="color:var(--violet-700)">{{ d.asset|upper }}:</strong> {{ d.allocation_pct }}% (${{ "{:,.0f}".format(d.amount_usd) }})<br>
+            <span style="color:var(--gray-500);font-size:0.72rem">{{ d.rationale }}</span>
+          </div>
+          {% endfor %}
+          <div style="font-size:0.78rem;color:var(--gray-500);margin-top:0.4rem">Remaining cash: <strong>${{ "{:,.0f}".format(alerts.remaining_cash_usd) }}</strong></div>
+        {% else %}
+          <p style="color:var(--gray-500);font-size:0.85rem;font-style:italic">{{ alerts.recommendation }}</p>
+        {% endif %}
+
+        <h2 style="margin-top:1rem">Divergence Alerts</h2>
+        {% for a in divergence.alerts %}
+        <div class="alert-item {{ a.severity }}">
+          <span class="alert-tag">{{ a.type }}</span>
+          <span>{{ a.message }}</span>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <footer>
+      <a href="/">Dashboard</a> &middot;
+      <a href="/indicators">Indicators</a> &middot;
+      <a href="/simulate">VaR</a> &middot;
+      <a href="/cash-flow">Cash Flow</a> &middot;
+      <a href="/purchasing-power">Calculator</a> &middot;
+      <a href="/profile">Profile</a> &middot;
+      {% if user %}<a href="/track">Income</a> &middot; <a href="/logout">Logout</a>{% else %}<a href="/login">Sign In</a>{% endif %}
+    </footer>
+  </div>
+</body>
+</html>

@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Purchasing Power Calculator</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <div class="container">
+    <div class="top-bar">
+      <h1>Purchasing Power &amp; Real Profit</h1>
+      <nav>
+        <a href="/">Dashboard</a>
+        <a href="/indicators">Indicators</a>
+        <a href="/simulate">VaR</a>
+        <a href="/cash-flow">Cash Flow</a>
+        <a href="/purchasing-power" class="active">Calculator</a>
+        <a href="/profile">Profile</a>
+        <a href="/track">Income</a>
+        {% if user %}<a href="/logout">Logout</a>{% else %}<a href="/login">Sign In</a>{% endif %}
+      </nav>
+    </div>
+
+    <div class="page-title">
+      <p>Current Inflation: <strong>{{ inflation }}%</strong> &middot; Enter values below to see inflation-adjusted reality.</p>
+    </div>
+
+    <div class="pp-two-col">
+      <div class="calc-card">
+        <h3>Purchasing Power Loss</h3>
+        <p class="calc-desc">Enter a product cost to see how much value inflation has eroded.</p>
+        <form method="get" action="/purchasing-power" class="calc-form">
+          <label>Product Cost ($)</label>
+          <input type="number" name="cost" step="0.01" min="0" value="{{ cost if cost > 0 else '' }}" placeholder="e.g. 10000" required>
+          <button type="submit">Calculate</button>
+        </form>
+        {% if result %}
+        <div class="calc-result">
+          <div class="result-row total"><span>Product Cost:</span><span>${{ "{:,.2f}".format(result.product_cost) }}</span></div>
+          <div class="result-row"><span>Inflation Rate:</span><span class="negative">{{ result.inflation_rate }}%</span></div>
+          <div class="result-row"><span>Real Value (today's $):</span><span class="positive">${{ "{:,.2f}".format(result.real_value) }}</span></div>
+          <div class="result-row total"><span>Purchasing Power Lost:</span><span class="negative">${{ "{:,.2f}".format(result.lost_amount) }} ({{ result.loss_percentage }}%)</span></div>
+          <div class="result-row"><span>Revenue to break even:</span><span class="negative">${{ "{:,.2f}".format(result.break_even_revenue_needed) }}</span></div>
+          <div class="formula">Real Value = Cost / (1 + Inflation Rate)</div>
+        </div>
+        {% endif %}
+      </div>
+
+      <div class="calc-card">
+        <h3>Real Profit Effect</h3>
+        <p class="calc-desc">Enter your nominal profit to see the inflation-adjusted real profit.</p>
+        <form method="get" action="/purchasing-power" class="calc-form">
+          <label>Nominal Profit ($)</label>
+          <input type="number" name="profit" step="0.01" min="0" value="{{ profit if profit > 0 else '' }}" placeholder="e.g. 500000">
+          <button type="submit">Calculate</button>
+        </form>
+        {% if real_profit_result %}
+        <div class="calc-result">
+          <div class="result-row total"><span>Nominal Profit:</span><span>${{ "{:,.2f}".format(real_profit_result.nominal_profit) }}</span></div>
+          <div class="result-row"><span>Inflation:</span><span class="negative">{{ real_profit_result.inflation_rate }}%</span></div>
+          <div class="result-row total"><span>Real Profit:</span><span class="positive">${{ "{:,.2f}".format(real_profit_result.real_profit) }}</span></div>
+          <div class="result-row"><span>Purchasing Power Loss:</span><span class="negative">{{ real_profit_result.purchasing_power_loss_pct }}%</span></div>
+          {% if real_profit_result.real_profit <= 0 %}
+          <div class="alert-item critical" style="margin-top:0.5rem"><span class="alert-tag">WARNING</span> Your real profit is zero or negative — business losing purchasing power.</div>
+          {% elif real_profit_result.real_profit < real_profit_result.nominal_profit * 0.5 %}
+          <div class="alert-item high" style="margin-top:0.5rem"><span class="alert-tag">CAUTION</span> Inflation consuming &gt;50% of nominal profit.</div>
+          {% endif %}
+          <div class="formula">Real Profit = Nominal Profit &times; (1 - Inflation Rate)</div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="section-card">
+      <h2>Formulas</h2>
+      <div class="formula" style="font-size:0.85rem;margin-bottom:0.3rem">Real Value = Cost / (1 + Inflation Rate)</div>
+      <div class="formula" style="font-size:0.85rem;margin-bottom:0.3rem">Purchasing Power Lost = Cost - Real Value</div>
+      <div class="formula" style="font-size:0.85rem;margin-bottom:0.3rem">Real Profit = Nominal Profit &times; (1 - Inflation Rate)</div>
+      <div class="formula" style="font-size:0.85rem">Break-Even Revenue = Cost &times; (1 + Inflation Rate)</div>
+    </div>
+
+    <footer>
+      <a href="/">Dashboard</a> &middot;
+      <a href="/indicators">Indicators</a> &middot;
+      <a href="/simulate">VaR</a> &middot;
+      <a href="/cash-flow">Cash Flow</a> &middot;
+      <a href="/purchasing-power">Calculator</a> &middot;
+      <a href="/profile">Profile</a> &middot;
+      {% if user %}<a href="/track">Income</a> &middot; <a href="/logout">Logout</a>{% else %}<a href="/login">Sign In</a>{% endif %}
+    </footer>
+  </div>
+</body>
+</html>
